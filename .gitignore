@@ -1,0 +1,8 @@
+.*
+!.gitignore
+
+RUNNING_PID
+logs/
+project/*-shim.sbt
+project/project/
+target/
