@@ -1,0 +1,9 @@
+CREATE TABLE `test_1` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `meta` TEXT NOT NULL,
+  PRIMARY KEY (`id`));
+
+CREATE TABLE `test_2` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `meta` TEXT NOT NULL,
+  PRIMARY KEY (`id`));
