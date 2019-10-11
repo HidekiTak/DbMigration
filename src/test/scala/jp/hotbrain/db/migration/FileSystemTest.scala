@@ -9,8 +9,8 @@ class FileSystemTest {
     """directory: filesystemtest1
   directory: common
     file: 00000.conf
-single:jp.hotbrain.db.migration.RuleFactorySingleForTest
-schemaName: "${ENV[ENV]}_tenant"
+single:"jp.hotbrain.db.migration.RuleFactorySingleForTest"
+schemaName: "${ENV}_tenant_db_migration"
     file: 00001_setup.sql
 CREATE TABLE `test_1` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -27,7 +27,7 @@ ADD COLUMN `ver` BIGINT NOT NULL AFTER `meta`;
   /directory: common
   directory: tenant
     file: 00000.conf
-multi: jp.hotbrain.db.migration.RuleFactoryMultiForTestInit
+multi: "jp.hotbrain.db.migration.RuleFactoryMultiForTestInit"
     file: 00001_setup.sql
 CREATE TABLE `test_5` (
   `id` INT NOT NULL AUTO_INCREMENT,

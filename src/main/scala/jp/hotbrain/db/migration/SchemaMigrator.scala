@@ -192,12 +192,12 @@ private[migration] object MigratorConfigEach {
 
 private[migration] object MigratorConfigParser extends RegexParsers {
 
-  private[this] def valueReaderEnv: Parser[ValueReader] = "(?i)env".r ~ "[" ~> "[^\\]6]+".r <~ "]" ^^ ValueReaderEnvironment.apply
+  private[this] def valueReaderEnv: Parser[ValueReader] = "${" ~> "[^}]+".r <~ "}" ^^ ValueReaderEnvironment.apply
 
 
   private[this] def valueReaderImmediate: Parser[ValueReader] = "[^\\$\"]+".r ^^ ValueReaderImmediate.apply
 
-  private[this] def valueReader: Parser[ValueReader] = (("${" ~> valueReaderEnv <~ "}") | valueReaderImmediate)
+  private[this] def valueReader: Parser[ValueReader] = (valueReaderEnv | valueReaderImmediate)
 
   private[this] lazy val valueReaders: Parser[ValueReader] = rep(valueReader) ^^ ValueReaderMulti.apply
 
