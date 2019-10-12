@@ -11,13 +11,13 @@ private[migration] object MigrationSchema {
     InetAddress.getLocalHost.getHostName
   }
 
-  def process(con: Connection, schema: String, sqls: Seq[(String, Seq[String])], semaphorePrefix: String = "migration"): Unit = {
+  def process(con: Connection, schema: String, sqls: Seq[(String, Seq[String])], dryRun: Boolean = false, semaphorePrefix: String = "migration"): Unit = {
     println(s"start: $schema")
     withSemaphore(
       con,
       schema,
       semaphorePrefix,
-      checkDone(_, schema, sqls.sortBy(_._1), semaphorePrefix).foreach(processOne(con, semaphorePrefix, _)))
+      checkDone(_, schema, sqls.sortBy(_._1), semaphorePrefix).foreach(processOne(con, semaphorePrefix, _, dryRun)))
   }
 
   private[this] def checkDone(con: Connection, schema: String, sqls: Seq[(String, Seq[String])], semaphorePrefix: String): Seq[(String, Seq[String])] = {
@@ -53,32 +53,41 @@ private[migration] object MigrationSchema {
   }
 
 
-  private[this] def processOne(con: Connection, semaphorePrefix: String, tuple: (String, Seq[String])): Unit = {
-    val now = System.currentTimeMillis()
-    con.setAutoCommit(false)
-    val stmt = con.createStatement()
-    try {
-      tuple._2.foreach(stmt.addBatch)
-      stmt.executeBatch()
-      val prep = con.prepareStatement(s"INSERT INTO `${semaphorePrefix}_jobs`(`name`,`at`)VALUES(?,?)")
-      try {
-        prep.setString(1, tuple._1)
-        prep.setLong(2, now)
-        prep.executeUpdate()
-      } finally {
-        prep.close()
+  private[this] def processOne(con: Connection, semaphorePrefix: String, tuple: (String, Seq[String]), dryRun: Boolean): Unit = {
+    if (dryRun) {
+      println(s"${con.getCatalog}.${tuple._1}: start")
+      tuple._2.foreach { sql =>
+        println(sql)
+        println
       }
-      con.commit()
       println(s"${con.getCatalog}.${tuple._1}: done")
-    } catch {
-      case ex: Throwable =>
-        System.err.println(s"${con.getCatalog}.${tuple._1}: ${ex.getMessage}")
-        con.rollback()
-        throw ex
-    } finally {
-      stmt.close()
+    } else {
+      val now = System.currentTimeMillis()
+      con.setAutoCommit(false)
+      val stmt = con.createStatement()
+      try {
+        tuple._2.foreach(stmt.addBatch)
+        stmt.executeBatch()
+        val prep = con.prepareStatement(s"INSERT INTO `${semaphorePrefix}_jobs`(`name`,`at`)VALUES(?,?)")
+        try {
+          prep.setString(1, tuple._1)
+          prep.setLong(2, now)
+          prep.executeUpdate()
+        } finally {
+          prep.close()
+        }
+        con.commit()
+        println(s"${con.getCatalog}.${tuple._1}: done")
+      } catch {
+        case ex: Throwable =>
+          System.err.println(s"${con.getCatalog}.${tuple._1}: ${ex.getMessage}")
+          con.rollback()
+          throw ex
+      } finally {
+        stmt.close()
+      }
+      con.setAutoCommit(true)
     }
-    con.setAutoCommit(true)
   }
 
   private[this] def createSchema(con: Connection, schema: String): Unit = {
