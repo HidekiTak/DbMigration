@@ -75,7 +75,7 @@ object MigratorConfig {
 
   private[this] def toSqls(sqls: Seq[FileSystem]): Seq[(String, Seq[String])] = {
     sqls.filter(fs => fs.isFile && fs.fileName.endsWith(".sql") && fs.content.nonEmpty).map { fs =>
-      (fs.fileName.substring(0, fs.fileName.length - 4), MySqlSplitter.split(fs.content.get))
+      (fs.fileName.substring(0, fs.fileName.length - 4), MySqlSplitter.split(fs.fileName, fs.content.get))
     }
   }
 }
@@ -185,7 +185,7 @@ private[migration] object MigratorConfigEach {
   def apply(eachRuleFactory: String): MigratorConfigEach = {
     new MigratorConfigEach(
       ClassLoad.find(eachRuleFactory, Array(classOf[MultiRuleFactory])),
-      null
+      folderName = null
     )
   }
 }
@@ -194,10 +194,9 @@ private[migration] object MigratorConfigParser extends RegexParsers {
 
   private[this] def valueReaderEnv: Parser[ValueReader] = "${" ~> "[^}]+".r <~ "}" ^^ ValueReaderEnvironment.apply
 
-
   private[this] def valueReaderImmediate: Parser[ValueReader] = "[^\\$\"]+".r ^^ ValueReaderImmediate.apply
 
-  private[this] def valueReader: Parser[ValueReader] = (valueReaderEnv | valueReaderImmediate)
+  private[this] def valueReader: Parser[ValueReader] = valueReaderEnv | valueReaderImmediate
 
   private[this] lazy val valueReaders: Parser[ValueReader] = rep(valueReader) ^^ ValueReaderMulti.apply
 
