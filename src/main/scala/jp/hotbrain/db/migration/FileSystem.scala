@@ -5,7 +5,7 @@ import java.util.regex.Pattern
 
 import scala.io.Source
 
-trait FileSystem {
+private[migration] trait FileSystem {
 
   def fileName: String
 
@@ -17,7 +17,7 @@ trait FileSystem {
 
 }
 
-object FileSystem {
+private[migration] object FileSystem {
   final val prefixJar: String = "jar:"
   final val prefixOs: String = "file:"
 

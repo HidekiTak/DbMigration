@@ -1,7 +1,5 @@
 package jp.hotbrain.db.migration
 
-import java.io.File
-
 object Main extends App {
   val (opt, filenames) = args.partition(_.startsWith("-"))
 
@@ -15,8 +13,7 @@ object Main extends App {
   }
   println(s"dryRun: ${opt.length != 0}")
   try {
-    MigratorConfig(FileSystem(FileSystem.prefixOs + new File(filenames(0)).getCanonicalPath))
-      .foreach { conf => conf.iterator.foreach(_.exec(MigrationSchema.process(_, _, conf.sqls, dryRun = opt.length != 0))) }
+    Migrator.processDirectory(filenames(0), dryRun = opt.length != 0)
     System.exit(0)
   } catch {
     case ex: Throwable =>

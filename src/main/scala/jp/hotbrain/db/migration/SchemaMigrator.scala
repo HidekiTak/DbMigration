@@ -57,7 +57,7 @@ private[migration] trait MigratorConfig extends Iterable[Callback] {
 }
 
 
-object MigratorConfig {
+private[migration] object MigratorConfig {
 
   def apply(fileSystem: FileSystem): Seq[MigratorConfig] = {
     val (ruleConf, files) = fileSystem.children.partition(_.fileName == "00000.conf")
