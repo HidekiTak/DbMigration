@@ -1,0 +1,2 @@
+ALTER TABLE `test_5`
+ADD COLUMN `ver` BIGINT NOT NULL AFTER `meta`;
