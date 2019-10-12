@@ -201,9 +201,9 @@ private[migration] object MigratorConfigParser extends RegexParsers {
   private[this] lazy val valueReaders: Parser[ValueReader] = rep(valueReader) ^^ ValueReaderMulti.apply
 
 
-  def schemaName: Parser[ValueReader] = "(?i)schema_?name".r ~ ":" ~ "\"" ~> valueReaders <~ "\""
+   def schemaName: Parser[ValueReader] = "(?i)(schema|catalog)(_?name)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\""
 
-  def constr: Parser[MigratorConfig] = "(?i)connection_?string".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigString(vr.value, null))
+  def constr: Parser[MigratorConfig] = "(?i)connection(_?string)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigString(vr.value, null))
 
   def connection: Parser[MigratorConfig] = "(?i)single".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigCon(vr.value, null))
 

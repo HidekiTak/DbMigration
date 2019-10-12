@@ -2,7 +2,7 @@ name := """DbMigration"""
 
 organization := "jp.hotbrain"
 
-version := "0.0.1-SNAPSHOT"
+version := "0.1.0"
 
 val ver_mysql = "5.1.48"
 
