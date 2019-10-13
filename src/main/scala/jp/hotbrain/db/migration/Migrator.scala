@@ -13,6 +13,8 @@ object Migrator {
 
   private[this] def processSub(fileSystem: FileSystem, dryRun: Boolean): Unit = {
     MigratorConfig(fileSystem)
-      .foreach { conf => conf.iterator.foreach(_.exec(MigrationSchema.process(_, _, conf.sqls, dryRun))) }
+      .foreach { conf =>
+        conf.iterator.foreach(_.exec(MigrationSchema.process(conf.folderName, _, _, conf.sqls, dryRun)))
+      }
   }
 }

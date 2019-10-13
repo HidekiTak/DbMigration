@@ -11,8 +11,9 @@ private[migration] object MigrationSchema {
     InetAddress.getLocalHost.getHostName
   }
 
-  def process(con: Connection, schema: String, sqls: Seq[(String, Seq[String])], dryRun: Boolean = false, semaphorePrefix: String = "migration"): Unit = {
-    println(s"start: $schema")
+  def process(fileName: String, con: Connection, schema: String, sqls: Seq[(String, Seq[String])], dryRun: Boolean = false, semaphorePrefix: String = "migration"): Unit = {
+    println(s"start: $fileName")
+    println(s"schema: $schema")
     withSemaphore(
       con,
       schema,

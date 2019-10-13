@@ -53,6 +53,7 @@ class MigrationSchemaTest {
       s"migration_test_${MigrationSchema.hostName}_${System.currentTimeMillis()}",
       (con, catalogName) => {
         MigrationSchema.process(
+          "xTest",
           con,
           catalogName,
           Seq(
@@ -67,6 +68,7 @@ class MigrationSchemaTest {
         assertEquals(Seq(), getInitOneName(con))
 
         MigrationSchema.process(
+          "xTest",
           con,
           catalogName,
           Seq(

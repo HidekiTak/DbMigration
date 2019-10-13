@@ -15,7 +15,7 @@ javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
 crossPaths := true
 
 libraryDependencies ++= Seq(
-  "jp.hotbrain" %% "dbmigration" % "0.0.1-SNAPSHOT"
+  "jp.hotbrain" %% "dbmigration" % "latest.integration"
 
   // https://mvnrepository.com/artifact/org.scala-lang.modules/scala-parser-combinators
   , "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"

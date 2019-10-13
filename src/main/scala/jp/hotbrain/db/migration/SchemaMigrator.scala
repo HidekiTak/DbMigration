@@ -11,6 +11,10 @@ private[migration] trait Callback {
 
 private[migration] trait MigratorConfig extends Iterable[Callback] {
 
+  def folderName: String
+
+  def schemaName: String
+
   def check(): Boolean
 
   /**
@@ -23,6 +27,8 @@ private[migration] trait MigratorConfig extends Iterable[Callback] {
    * SchemaNames
    */
   protected[migration] val list: Seq[String]
+
+  def withSchemaName(schemaName: String): MigratorConfig
 
   def withFolderName(folderName: String): MigratorConfig
 
@@ -62,7 +68,6 @@ private[migration] object MigratorConfig {
   def apply(fileSystem: FileSystem): Seq[MigratorConfig] = {
     val (ruleConf, files) = fileSystem.children.partition(_.fileName == "00000.conf")
     if (ruleConf.nonEmpty) {
-      println(s"process: ${fileSystem.fileName}")
       apply(fileSystem, ruleConf.head, files.filter(_.isFile)).toList
     } else {
       files.filter(!_.isFile).sortBy(_.fileName).flatMap(apply)
@@ -82,10 +87,9 @@ private[migration] object MigratorConfig {
 
 private[migration] case class MigratorConfigString(
                                                     connectionString: String,
-                                                    folderName: String
+                                                    folderName: String,
+                                                    schemaName: String
                                                   ) extends MigratorConfig {
-
-  def schemaName: String = folderName
 
   override protected[migration] final val list: Seq[String] = Seq(folderName)
 
@@ -96,6 +100,14 @@ private[migration] case class MigratorConfigString(
   override def check(): Boolean = {
     MigratorConfigString.load(connectionString)
     true
+  }
+
+  override def withSchemaName(schemaName: String): MigratorConfig = {
+    if (null == this.schemaName) {
+      copy(schemaName = schemaName)
+    } else {
+      this
+    }
   }
 
   override def withFolderName(folderName: String): MigratorConfig = {
@@ -125,9 +137,9 @@ private[migration] object MigratorConfigCon
 
 private[migration] case class MigratorConfigCon(
                                                  singleRuleFactoryName: String,
-                                                 folderName: String
+                                                 folderName: String,
+                                                 schemaName: String
                                                ) extends MigratorConfig {
-  def schemaName: String = folderName
 
   private lazy val singleRule: SingleRule = {
     val factory: SingleRuleFactory = ClassLoad.find(singleRuleFactoryName, Array(classOf[SingleRuleFactory]))
@@ -137,11 +149,19 @@ private[migration] case class MigratorConfigCon(
     factory.singleRule
   }
 
-  override protected[migration] final val list: Seq[String] = Seq(folderName)
+  override protected[migration] final val list: Seq[String] = Seq(schemaName)
 
   override def factory: String => Connection = singleRule.connectionFor
 
   override def check(): Boolean = singleRule != null
+
+  override def withSchemaName(schemaName: String): MigratorConfig = {
+    if (null == this.schemaName) {
+      copy(schemaName = schemaName)
+    } else {
+      this
+    }
+  }
 
   override def withFolderName(folderName: String): MigratorConfig = {
     if (null == this.folderName) {
@@ -154,7 +174,8 @@ private[migration] case class MigratorConfigCon(
 
 private[migration] case class MigratorConfigEach(
                                                   eachRuleFactoryName: String,
-                                                  folderName: String
+                                                  folderName: String,
+                                                  schemaName: String
                                                 ) extends MigratorConfig {
 
   private lazy val eachRule: MultiRule = {
@@ -171,6 +192,14 @@ private[migration] case class MigratorConfigEach(
 
   override def check(): Boolean = null != eachRule
 
+  override def withSchemaName(schemaName: String): MigratorConfig = {
+    if (null == this.schemaName) {
+      copy(schemaName = schemaName)
+    } else {
+      this
+    }
+  }
+
   override def withFolderName(folderName: String): MigratorConfig = {
     if (null == this.folderName) {
       copy(folderName = folderName)
@@ -185,7 +214,8 @@ private[migration] object MigratorConfigEach {
   def apply(eachRuleFactory: String): MigratorConfigEach = {
     new MigratorConfigEach(
       ClassLoad.find(eachRuleFactory, Array(classOf[MultiRuleFactory])),
-      folderName = null
+      folderName = null,
+      schemaName = null
     )
   }
 }
@@ -201,13 +231,13 @@ private[migration] object MigratorConfigParser extends RegexParsers {
   private[this] lazy val valueReaders: Parser[ValueReader] = rep(valueReader) ^^ ValueReaderMulti.apply
 
 
-   def schemaName: Parser[ValueReader] = "(?i)(schema|catalog)(_?name)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\""
+  def schemaName: Parser[ValueReader] = "(?i)(schema|catalog)(_?name)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\""
 
-  def constr: Parser[MigratorConfig] = "(?i)connection(_?string)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigString(vr.value, null))
+  def constr: Parser[MigratorConfig] = "(?i)connection(_?string)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigString(vr.value, null, null))
 
-  def connection: Parser[MigratorConfig] = "(?i)single".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigCon(vr.value, null))
+  def connection: Parser[MigratorConfig] = "(?i)single".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigCon(vr.value, null, null))
 
-  def each: Parser[MigratorConfig] = "(?i)multi".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigEach(vr.value, null))
+  def each: Parser[MigratorConfig] = "(?i)multi".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigEach(vr.value, null, null))
 
   def parse(folderName: String, input: String): Option[MigratorConfig] = {
     parseAll(folderName, new StringReader(input))
@@ -221,7 +251,7 @@ private[migration] object MigratorConfigParser extends RegexParsers {
             result.collectFirst {
               case vr: ValueReader => vr
             } match {
-              case Some(vr) => x.withFolderName(vr.value)
+              case Some(vr) => x.withSchemaName(vr.value)
               case None => x
             }
         }

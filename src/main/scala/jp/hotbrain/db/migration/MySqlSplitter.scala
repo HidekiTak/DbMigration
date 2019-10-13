@@ -15,7 +15,7 @@ private[migration] object MySqlSplitter extends RegexParsers {
     }
     val current = new StringBuilder
     val lines = replace(fileName, sql, current)
-      .split("(([\\r\\n]+[ \\t]*)+|--[^\r\n]*)")
+      .split("(([\\r\\n]+[ \\t]*)+)")
       .map(_.trim)
       .filterNot(str => str.isEmpty || str.startsWith("--"))
 
@@ -49,10 +49,9 @@ private[migration] object MySqlSplitter extends RegexParsers {
     result.toSeq // for scala 2.13
   }
 
+  private[this] def valueReaderEnv: Parser[ValueReader] = "${" ~> "[A-Za-z][0-9A-Za-z\\-_]*".r <~ "}" ^^ ValueReaderEnvironment.apply
 
-  private[this] def valueReaderEnv: Parser[ValueReader] = "${" ~> "[^}]+".r <~ "}" ^^ ValueReaderEnvironment.apply
-
-  private[this] def valueReaderImmediate: Parser[ValueReader] = "[^\\$\"]+".r ^^ ValueReaderImmediate.apply
+  private[this] def valueReaderImmediate: Parser[ValueReader] = """(?:(?:\\.)+|[^$]+|.[^{])+""".r ^^ ValueReaderImmediate.apply
 
   private[this] final val valueReaders: Parser[List[ValueReader]] = rep(valueReaderEnv | valueReaderImmediate)
 

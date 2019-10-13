@@ -60,14 +60,12 @@ private[migration] case class FileSystemOs(
 }
 
 private[migration] object FileSystemJar {
-  //  def apply(name: String): FileSystem = {
-  //    FileSystemJar(getClass, name)
-  //  }
 
   def apply(clazz: Class[_], name: String): FileSystem = {
 
     val res = clazz.getResource(name)
     if (null == res) {
+      println(s"resource not found: $name")
       return null
     } else {
       val content: String = {
@@ -79,7 +77,8 @@ private[migration] object FileSystemJar {
         }
       }
       if (content.isEmpty) {
-        FileSystemJarFile(name, Option(content))
+        println(s"resource is empty: $name")
+        return null
       } else {
         if (getFirstLine(content).flatMap(f => Option(clazz.getResource(name + "/" + f))).isEmpty) {
           FileSystemJarFile(name, Option(content))
@@ -95,7 +94,12 @@ private[migration] object FileSystemJar {
   private[this] def getFirstLine(str: String): Option[String] = {
     val mat = regexFirstLine.matcher(str)
     if (mat.find()) {
-      Option(mat.group(1))
+      val firstLine = mat.group(1)
+      if (firstLine.isEmpty) {
+        None
+      } else {
+        Option(firstLine)
+      }
     } else {
       None
     }

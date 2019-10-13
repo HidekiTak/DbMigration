@@ -1,7 +1,7 @@
 package jp.hotbrain.db.migration
 
-import org.junit.Test
 import org.junit.Assert._
+import org.junit.Test
 
 class MySqlSplitterTest {
 
@@ -23,7 +23,7 @@ f;;
     val env = System.getenv("ENV")
     assertEquals(
       Seq(
-        "abc\nde;",
+        "abc ---\nde; ----",
         s"$env\nf;\nf;;"
       ), result)
   }

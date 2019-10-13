@@ -31,6 +31,7 @@ class MigratorConfigTest {
     configs.foreach { conf =>
       conf.iterator.foreach(_.exec { (con, schemaName) =>
         MigrationSchema.process(
+          "parseTest",
           con,
           schemaName,
           conf.sqls
@@ -41,9 +42,8 @@ class MigratorConfigTest {
     val configs2 = MigratorConfig(FileSystem(FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest2"))
     configs2.foreach { conf =>
       conf.iterator.foreach(_.exec { (con, schemaName) =>
-        MigrationSchema.process(con, schemaName, conf.sqls)
+        MigrationSchema.process("parseTest", con, schemaName, conf.sqls)
       })
     }
-
   }
 }
