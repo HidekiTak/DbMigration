@@ -1,7 +1,7 @@
 package jp.hotbrain.db.migration
 
 import java.io.{Reader, StringReader}
-import java.sql.{Connection, Driver, DriverManager}
+import java.sql.{Connection, DriverManager}
 
 import scala.util.parsing.combinator.RegexParsers
 
@@ -9,7 +9,7 @@ private[migration] trait Callback {
   def exec(callback: (Connection, String) => Unit): Unit
 }
 
-private[migration] trait MigratorConfig extends Iterable[Callback] {
+private[migration] trait MigratorConfig {
 
   def folderName: String
 
@@ -41,8 +41,10 @@ private[migration] trait MigratorConfig extends Iterable[Callback] {
     this
   }
 
-  override def iterator: Iterator[Callback] = new Iterator[Callback] {
-    private[this] val schemas = list.iterator
+  def iterator: Iterator[Callback] = filter(_ => true)
+
+  def filter(f: String => Boolean): Iterator[Callback] = new Iterator[Callback] {
+    private[this] val schemas = list.filter(f).iterator
 
     override def hasNext: Boolean = schemas.hasNext
 
