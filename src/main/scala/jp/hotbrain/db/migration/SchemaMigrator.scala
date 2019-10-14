@@ -68,11 +68,12 @@ private[migration] trait MigratorConfig {
 private[migration] object MigratorConfig {
 
   def apply(fileSystem: FileSystem): Seq[MigratorConfig] = {
-    val (ruleConf, files) = fileSystem.children.partition(_.fileName == "00000.conf")
+    val children = fileSystem.children
+    val ruleConf = children.sortBy(_.fileName).find(_.fileName.endsWith(".conf"))
     if (ruleConf.nonEmpty) {
-      apply(fileSystem, ruleConf.head, files.filter(_.isFile)).toList
+      apply(fileSystem, ruleConf.head, children.filter(_.isFile)).toList
     } else {
-      files.filter(!_.isFile).sortBy(_.fileName).flatMap(apply)
+      children.filter(!_.isFile).sortBy(_.fileName).flatMap(apply)
     }
   }
 

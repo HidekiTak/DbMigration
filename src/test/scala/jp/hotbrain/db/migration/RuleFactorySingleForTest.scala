@@ -20,7 +20,7 @@ abstract class RuleFactoryMultiBaseForTest extends RuleFactoryBaseForTest with M
 
   protected def ids: Seq[String]
 
-  override def schemas(schemaName: String): Seq[String] = ids.map(schemaName + "_" + _ + "_db_migration")
+  override def schemas(schemaBaseName: String): Seq[String] = ids.map(schemaBaseName + "_" + _ + "_db_migration")
 }
 
 class RuleFactoryMultiForTestInit() extends RuleFactoryMultiBaseForTest {
