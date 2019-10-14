@@ -12,8 +12,7 @@ private[migration] object MigrationSchema {
   }
 
   def process(fileName: String, con: Connection, schema: String, sqls: Seq[(String, Seq[String])], dryRun: Boolean = false, semaphorePrefix: String = "migration"): Unit = {
-    println(s"start: $fileName")
-    println(s"schema: $schema")
+    println(s"DbMigration: start: $fileName for $schema")
     withSemaphore(
       con,
       schema,
@@ -56,12 +55,12 @@ private[migration] object MigrationSchema {
 
   private[this] def processOne(con: Connection, semaphorePrefix: String, tuple: (String, Seq[String]), dryRun: Boolean): Unit = {
     if (dryRun) {
-      println(s"${con.getCatalog}.${tuple._1}: start")
+      println(s"DbMigration: ${con.getCatalog}.${tuple._1}: start")
       tuple._2.foreach { sql =>
         println(sql)
         println
       }
-      println(s"${con.getCatalog}.${tuple._1}: done")
+      println(s"DbMigration: ${con.getCatalog}.${tuple._1}: done")
     } else {
       val now = System.currentTimeMillis()
       con.setAutoCommit(false)
@@ -78,10 +77,10 @@ private[migration] object MigrationSchema {
           prep.close()
         }
         con.commit()
-        println(s"${con.getCatalog}.${tuple._1}: done")
+        println(s"DbMigration: ${con.getCatalog}.${tuple._1}: done")
       } catch {
         case ex: Throwable =>
-          System.err.println(s"${con.getCatalog}.${tuple._1}: ${ex.getMessage}")
+          System.err.println(s"DbMigration: ${con.getCatalog}.${tuple._1}: ${ex.getMessage}")
           con.rollback()
           throw ex
       } finally {
@@ -95,11 +94,11 @@ private[migration] object MigrationSchema {
     val stmt = con.createStatement()
     try {
       stmt.execute(s"CREATE SCHEMA `$schema`")
-      println(s"$schema: created")
+      println(s"DbMigration: $schema: created")
     } catch {
       case ex: SQLException if 0 <= ex.getMessage.indexOf("Can't create database") =>
       case ex: Throwable =>
-        System.err.println(s"$schema: fail to create")
+        System.err.println(s"DbMigration: $schema: fail to create")
         ex.printStackTrace(System.err)
         throw ex
     } finally {

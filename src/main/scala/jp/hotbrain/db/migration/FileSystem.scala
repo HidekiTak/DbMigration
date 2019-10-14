@@ -65,7 +65,7 @@ private[migration] object FileSystemJar {
 
     val res = clazz.getResource(name)
     if (null == res) {
-      println(s"resource not found: $name")
+      println(s"DbMigration: resource not found: $name")
       return null
     } else {
       val content: String = {
@@ -77,7 +77,7 @@ private[migration] object FileSystemJar {
         }
       }
       if (content.isEmpty) {
-        println(s"resource is empty: $name")
+        println(s"DbMigration: resource is empty: $name")
         return null
       } else {
         if (getFirstLine(content).flatMap(f => Option(clazz.getResource(name + "/" + f))).isEmpty) {
