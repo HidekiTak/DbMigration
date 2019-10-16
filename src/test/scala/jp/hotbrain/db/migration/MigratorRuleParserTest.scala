@@ -12,7 +12,8 @@ class MigratorRuleParserTest {
       input =
         """
 ConnectionString: "${ENV[AWS_REGION]}_common"
-""")
+""",
+      migrationDic = MigrationDicDefault)
     println(result)
   }
 
@@ -22,7 +23,8 @@ ConnectionString: "${ENV[AWS_REGION]}_common"
 
     val result = MigratorConfigParser.parse(
       folderName = "parseTest",
-      input = "single: \"jp.hotbrain.db.migration.RuleFactorySingleForTest\"").get
+      input = "single: \"jp.hotbrain.db.migration.RuleFactorySingleForTest\"",
+      migrationDic = MigrationDicDefault).get
 
     assertEquals(
       "jp.hotbrain.db.migration.RuleFactorySingleForTest",
@@ -32,7 +34,8 @@ ConnectionString: "${ENV[AWS_REGION]}_common"
     try {
       MigratorConfigParser.parse(
         folderName = "parseTest",
-        input = "single: \"jp.hotbrain.db.migration.RuleFactorySingleForTest2\"").get.check()
+        input = "single: \"jp.hotbrain.db.migration.RuleFactorySingleForTest2\"",
+        migrationDic = MigrationDicDefault).get.check()
       fail()
     } catch {
       case _: ClassNotFoundException =>

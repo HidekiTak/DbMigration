@@ -18,7 +18,8 @@ delimiter ;;
 ${ENV}
 f;
 f;;
-""")
+""",
+        migrationDic = MigrationDicDefault)
 
     val env = System.getenv("ENV")
     assertEquals(

@@ -67,23 +67,23 @@ private[migration] trait MigratorConfig {
 
 private[migration] object MigratorConfig {
 
-  def apply(fileSystem: FileSystem): Seq[MigratorConfig] = {
+  def apply(fileSystem: FileSystem, migrationDic: MigrationDic): Seq[MigratorConfig] = {
     val children = fileSystem.children
     val ruleConf = children.sortBy(_.fileName).find(_.fileName.endsWith(".conf"))
     if (ruleConf.nonEmpty) {
-      apply(fileSystem, ruleConf.head, children.filter(_.isFile)).toList
+      apply(fileSystem, ruleConf.head, migrationDic, children.filter(_.isFile)).toList
     } else {
-      children.filter(!_.isFile).sortBy(_.fileName).flatMap(apply)
+      children.filter(!_.isFile).sortBy(_.fileName).flatMap(apply(_, migrationDic))
     }
   }
 
-  private[this] def apply(parent: FileSystem, configFile: FileSystem, others: Seq[FileSystem]): Option[MigratorConfig] = {
-    MigratorConfigParser.parse(parent.fileName, configFile.content.getOrElse("")).map(_.withFolderName(parent.fileName).withSqls(toSqls(others)))
+  private[this] def apply(parent: FileSystem, configFile: FileSystem, migrationDic: MigrationDic, others: Seq[FileSystem]): Option[MigratorConfig] = {
+    MigratorConfigParser.parse(parent.fileName, configFile.content.getOrElse(""), migrationDic).map(_.withFolderName(parent.fileName).withSqls(toSqls(others, migrationDic)))
   }
 
-  private[this] def toSqls(sqls: Seq[FileSystem]): Seq[(String, Seq[String])] = {
+  private[this] def toSqls(sqls: Seq[FileSystem], migrationDic: MigrationDic): Seq[(String, Seq[String])] = {
     sqls.filter(fs => fs.isFile && fs.fileName.endsWith(".sql") && fs.content.nonEmpty).map { fs =>
-      (fs.fileName.substring(0, fs.fileName.length - 4), MySqlSplitter.split(fs.fileName, fs.content.get))
+      (fs.fileName.substring(0, fs.fileName.length - 4), MySqlSplitter.split(fs.fileName, fs.content.get, migrationDic))
     }
   }
 }
@@ -234,28 +234,45 @@ private[migration] object MigratorConfigParser extends RegexParsers {
   private[this] lazy val valueReaders: Parser[ValueReader] = rep(valueReader) ^^ ValueReaderMulti.apply
 
 
-  def schemaName: Parser[ValueReader] = "(?i)(schema|catalog)(_?name)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\""
+  private[this] def schemaName: Parser[ValueReader] = "(?i)(schema|catalog)(_?name)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\""
 
-  def constr: Parser[MigratorConfig] = "(?i)connection(_?string)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigString(vr.value, null, null))
+  private[this] def constr: Parser[MigratorConfigBase] = "(?i)connection(_?string)?".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => new MigratorConfigStringBase(vr))
 
-  def connection: Parser[MigratorConfig] = "(?i)single".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigCon(vr.value, null, null))
+  private[this] def connection: Parser[MigratorConfigBase] = "(?i)single".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => new MigratorConfigConBase(vr))
 
-  def each: Parser[MigratorConfig] = "(?i)multi".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => MigratorConfigEach(vr.value, null, null))
+  private[this] def each: Parser[MigratorConfigBase] = "(?i)multi".r ~ ":" ~ "\"" ~> valueReaders <~ "\"" ^^ (vr => new MigratorConfigEachBase(vr))
 
-  def parse(folderName: String, input: String): Option[MigratorConfig] = {
-    parseAll(folderName, new StringReader(input))
+  private[this] trait MigratorConfigBase {
+    def apply(migrationDic: MigrationDic): MigratorConfig
   }
 
-  def parseAll(folderName: String, reader: Reader): Option[MigratorConfig] =
+  private[this] class MigratorConfigStringBase(vr: ValueReader) extends MigratorConfigBase {
+    override def apply(migrationDic: MigrationDic): MigratorConfig = MigratorConfigString(vr.value(migrationDic), null, null)
+  }
+
+  private[this] class MigratorConfigConBase(vr: ValueReader) extends MigratorConfigBase {
+    override def apply(migrationDic: MigrationDic): MigratorConfig = MigratorConfigCon(vr.value(migrationDic), null, null)
+  }
+
+  private[this] class MigratorConfigEachBase(vr: ValueReader) extends MigratorConfigBase {
+    override def apply(migrationDic: MigrationDic): MigratorConfig = MigratorConfigEach(vr.value(migrationDic), null, null)
+  }
+
+
+  def parse(folderName: String, input: String, migrationDic: MigrationDic): Option[MigratorConfig] = {
+    parseAll(folderName, new StringReader(input), migrationDic)
+  }
+
+  def parseAll(folderName: String, reader: Reader, migrationDic: MigrationDic): Option[MigratorConfig] =
     parseAll(rep(constr | connection | each | schemaName), reader) match {
       case Success(result: List[_], _) =>
         result.collectFirst {
-          case x: MigratorConfig =>
+          case x: MigratorConfigBase =>
             result.collectFirst {
               case vr: ValueReader => vr
             } match {
-              case Some(vr) => x.withSchemaName(vr.value)
-              case None => x
+              case Some(vr) => x(migrationDic).withSchemaName(vr.value(migrationDic))
+              case None => x(migrationDic)
             }
         }
       case Failure(msg, _) => println(s"""DbMigration: FAILURE("$folderName"): $msg""")

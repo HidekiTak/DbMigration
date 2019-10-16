@@ -9,12 +9,12 @@ private[migration] object MySqlSplitter extends RegexParsers {
   override final val whiteSpace = "".r
 
 
-  def split(fileName: String, sql: String): Seq[String] = {
+  def split(fileName: String, sql: String, migrationDic: MigrationDic): Seq[String] = {
     if (null == sql || sql.isEmpty) {
       return Nil
     }
     val current = new StringBuilder
-    val lines = replace(fileName, sql, current)
+    val lines = replace(fileName, sql, current, migrationDic)
       .split("(([\\r\\n]+[ \\t]*)+)")
       .map(_.trim)
       .filterNot(str => str.isEmpty || str.startsWith("--"))
@@ -55,11 +55,11 @@ private[migration] object MySqlSplitter extends RegexParsers {
 
   private[this] final val valueReaders: Parser[List[ValueReader]] = rep(valueReaderEnv | valueReaderImmediate)
 
-  private[migration] def replace(fileName: String, line: String, sb: StringBuilder): String = {
+  private[migration] def replace(fileName: String, line: String, sb: StringBuilder, migrationDic: MigrationDic): String = {
     parseAll(valueReaders, line) match {
       case Success(result: List[ValueReader], _) =>
         sb.clear()
-        result.foldLeft(sb)((sb, vr) => vr.apply(sb)).toString
+        result.foldLeft(sb)((sb, vr) => vr.apply(sb, migrationDic)).toString
       case Failure(msg, _) =>
         throw new Exception(s"""FAILURE("$fileName"): $msg""")
       case Error(msg, next) =>

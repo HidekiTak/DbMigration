@@ -27,7 +27,7 @@ class MigratorConfigTest {
 
   @Test
   def parseTest(): Unit = {
-    val configs = MigratorConfig(FileSystem(FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest1"))
+    val configs = MigratorConfig(FileSystem(FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest1"), MigrationDicDefault)
     configs.foreach { conf =>
       conf.iterator.foreach(_.exec { (con, schemaName) =>
         MigrationSchema.process(
@@ -39,7 +39,7 @@ class MigratorConfigTest {
       })
     }
 
-    val configs2 = MigratorConfig(FileSystem(FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest2"))
+    val configs2 = MigratorConfig(FileSystem(FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest2"), MigrationDicDefault)
     configs2.foreach { conf =>
       conf.iterator.foreach(_.exec { (con, schemaName) =>
         MigrationSchema.process("parseTest", con, schemaName, conf.sqls)
