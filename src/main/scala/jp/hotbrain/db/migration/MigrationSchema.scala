@@ -11,6 +11,28 @@ private[migration] object MigrationSchema {
     InetAddress.getLocalHost.getHostName
   }
 
+  def job(jobName: String, con: Connection, schema: String, callback: Connection => Unit, semaphorePrefix: String = "migration"): Unit = {
+    withSemaphore(
+      con,
+      schema,
+      semaphorePrefix,
+      checkDone(_, schema, Seq((jobName, Seq[String]())), semaphorePrefix)
+        .map(_ => callback(con))
+        .foreach(_ => jobDone(con, jobName, semaphorePrefix)))
+  }
+
+  private[this] def jobDone(con: Connection, jobName: String, semaphorePrefix: String): Unit = {
+    val prep = con.prepareStatement(s"INSERT INTO `${semaphorePrefix}_jobs`(`name`,`at`)VALUES(?,?)")
+    try {
+      prep.setString(1, jobName)
+      prep.setLong(2, System.currentTimeMillis())
+      prep.executeUpdate()
+    } finally {
+      prep.close()
+    }
+
+  }
+
   def process(fileName: String, con: Connection, schema: String, sqls: Seq[(String, Seq[String])], dryRun: Boolean = false, semaphorePrefix: String = "migration"): Unit = {
     println(s"DbMigration: start: $fileName for $schema")
     withSemaphore(
@@ -62,20 +84,12 @@ private[migration] object MigrationSchema {
       }
       println(s"DbMigration: ${con.getCatalog}.${tuple._1}: done")
     } else {
-      val now = System.currentTimeMillis()
       con.setAutoCommit(false)
       val stmt = con.createStatement()
       try {
         tuple._2.foreach(stmt.addBatch)
         stmt.executeBatch()
-        val prep = con.prepareStatement(s"INSERT INTO `${semaphorePrefix}_jobs`(`name`,`at`)VALUES(?,?)")
-        try {
-          prep.setString(1, tuple._1)
-          prep.setLong(2, now)
-          prep.executeUpdate()
-        } finally {
-          prep.close()
-        }
+        jobDone(con, tuple._1, semaphorePrefix)
         con.commit()
         println(s"DbMigration: ${con.getCatalog}.${tuple._1}: done")
       } catch {

@@ -47,20 +47,19 @@ ADD COLUMN `ver` BIGINT NOT NULL AFTER `meta`;
 
   @Test
   def osTest(): Unit = {
-    val ofOs = FileSystem("file:" + ProjectRoot.of("test_data/jp/hotbrain/db/migration/filesystemtest1").toAbsolutePath.toString)
+    val ofOs = FileSystem(getClass, "file:" + ProjectRoot.of("test_data/jp/hotbrain/db/migration/filesystemtest1").toAbsolutePath.toString)
     assertEquals(expected, getContent(ofOs))
   }
 
 
   @Test
   def jarTest(): Unit = {
-    val ofJar = FileSystem("jar:/jp/hotbrain/db/migration/filesystemtest1")
+    val ofJar = FileSystem(getClass, "jar:/jp/hotbrain/db/migration/filesystemtest1")
     assertEquals(expected, getContent(ofJar))
   }
 
   private[this] def getContent(fileSystem: FileSystem): String = {
     getContentSub(new StringBuilder, "", fileSystem).toString
-
   }
 
   private[this] def getContentSub(sb: StringBuilder, tab: String, fileSystem: FileSystem): StringBuilder = {

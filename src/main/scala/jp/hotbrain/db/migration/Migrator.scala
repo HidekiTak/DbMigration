@@ -1,18 +1,24 @@
 package jp.hotbrain.db.migration
 
 import java.io.File
+import java.sql.Connection
 
 object Migrator {
-  def processDirectory(directoryName: String, migrationDic: MigrationDic = MigrationDicDefault, targetSchema: String = null, dryRun: Boolean = false): Unit = {
-    processSub(FileSystem(FileSystem.prefixOs + new File(directoryName).getCanonicalPath), migrationDic, targetSchema, dryRun)
+  def processDirectory(
+                        directoryName: String,
+                        migrationDic: MigrationDic = MigrationDicDefault,
+                        targetSchema: String = null,
+                        dryRun: Boolean = false): Unit = {
+    processSub(FileSystemOs(new File(directoryName)), migrationDic, targetSchema, dryRun)
   }
 
   /**
    *
    * @param jarPackageName separate by "/"
    */
-  def processPackage(jarPackageName: String, migrationDic: MigrationDic = MigrationDicDefault, targetSchema: String = null, dryRun: Boolean = false): Unit = {
-    processSub(FileSystem(FileSystem.prefixJar + jarPackageName), migrationDic, targetSchema, dryRun)
+  def processPackage(clazz: Class[_],
+                     jarPackageName: String, migrationDic: MigrationDic = MigrationDicDefault, targetSchema: String = null, dryRun: Boolean = false): Unit = {
+    processSub(FileSystem(clazz, FileSystem.prefixJar + jarPackageName), migrationDic, targetSchema, dryRun)
   }
 
   private[this] def processSub(fileSystem: FileSystem, migrationDic: MigrationDic, targetSchema: String, dryRun: Boolean): Unit = {
@@ -22,5 +28,9 @@ object Migrator {
           _.exec(MigrationSchema.process(conf.folderName, _, _, conf.sqls, dryRun))
         }
       )
+  }
+
+  def job(con: Connection, jobName: String, schema: String, callback: Connection => Unit): Unit = {
+    MigrationSchema.job(jobName, con, schema, callback)
   }
 }

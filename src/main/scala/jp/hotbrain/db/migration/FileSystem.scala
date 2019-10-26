@@ -1,8 +1,11 @@
 package jp.hotbrain.db.migration
 
-import java.io.File
+import java.io.{File, FileNotFoundException}
+import java.net.URL
+import java.util.jar.JarFile
 import java.util.regex.Pattern
 
+import scala.collection.mutable
 import scala.io.Source
 
 private[migration] trait FileSystem {
@@ -21,11 +24,28 @@ private[migration] object FileSystem {
   final val prefixJar: String = "jar:"
   final val prefixOs: String = "file:"
 
-  def apply(name: String): FileSystem = {
-    if (name.startsWith(prefixOs)) {
-      FileSystemOs(new File(name.substring(5)))
-    } else if (name.startsWith(prefixJar)) {
-      FileSystemJar(getClass, name.substring(4))
+  def apply(clazz: Class[_], name: String): FileSystem = {
+    if (name.startsWith(prefixJar)) {
+      val subName = name.substring(4)
+      val res: URL = clazz.getResource(subName)
+      if (null == res) {
+        throw new FileNotFoundException(s"DbMigration: resource not found: $subName")
+      }
+      val protocol = res.getProtocol
+      if (protocol == "jar") {
+        FileSystemJar.apply(res, subName)
+      } else {
+        FileSystemOs(new File(res.getFile))
+      }
+    } else if (name.startsWith(prefixOs)) {
+      FileSystemOs(new File(name.substring(5)).getAbsoluteFile)
+      //    }
+      //
+      //
+      //    if (name.startsWith(prefixOs)) {
+      //      FileSystemOs(new File(name.substring(5)))
+      //    } else if (name.startsWith(prefixJar)) {
+      //      FileSystemJar(getClass, name.substring(4))
     } else {
       throw new Exception(s"$name not found")
     }
@@ -61,49 +81,52 @@ private[migration] case class FileSystemOs(
 
 private[migration] object FileSystemJar {
 
-  def apply(clazz: Class[_], name: String): FileSystem = {
-
-    val res = clazz.getResource(name)
-    if (null == res) {
-      println(s"DbMigration: resource not found: $name")
-      return null
-    } else {
-      val content: String = {
-        val stream = res.openStream()
-        try {
-          Source.fromInputStream(stream).mkString
-        } finally {
-          stream.close()
-        }
-      }
-      if (content.isEmpty) {
-        println(s"DbMigration: resource is empty: $name")
-        return null
-      } else {
-        if (getFirstLine(content).flatMap(f => Option(clazz.getResource(name + "/" + f))).isEmpty) {
-          FileSystemJarFile(name, Option(content))
-        } else {
-          FileSystemJarDir(clazz, name, content.split("\\r\\n|[\\n\\r\\u2028\\u2029\\u0085]"))
+  def apply(res: URL, name: String): FileSystem = {
+    val split = res.getPath.substring(5).split('!')
+    val basePath = split(1)
+    val basePathLen = basePath.length + 1
+    val jarFile: JarFile = new JarFile(split.head)
+    val entries = jarFile.entries()
+    val top = FileSystemJarDir(basePath)
+    while (entries.hasMoreElements) {
+      val entry = entries.nextElement()
+      val name = "/" + entry.getName
+      if (name.startsWith(basePath)) {
+        val tails = name.substring(basePathLen).split('/').filter(_.nonEmpty)
+        if (tails.nonEmpty) {
+          top.add(tails, name,
+            if (entry.isDirectory) {
+              FileSystemJarDir(name)
+            } else {
+              val is = jarFile.getInputStream(entry)
+              try {
+                FileSystemJarFile(name, Some(Source.fromInputStream(is).mkString))
+              } finally {
+                is.close()
+              }
+            })
         }
       }
     }
+    top
   }
 
-  private[this] final val regexFirstLine = Pattern.compile("([^\\n\\r\\u2028\\u2029\\u0085]*)")
-
-  private[this] def getFirstLine(str: String): Option[String] = {
-    val mat = regexFirstLine.matcher(str)
-    if (mat.find()) {
-      val firstLine = mat.group(1)
-      if (firstLine.isEmpty) {
-        None
-      } else {
-        Option(firstLine)
-      }
-    } else {
-      None
-    }
-  }
+  //
+  //  private[this] final val regexFirstLine = Pattern.compile("([^\\n\\r\\u2028\\u2029\\u0085]*)")
+  //
+  //  private[this] def getFirstLine(str: String): Option[String] = {
+  //    val mat = regexFirstLine.matcher(str)
+  //    if (mat.find()) {
+  //      val firstLine = mat.group(1)
+  //      if (firstLine.isEmpty) {
+  //        None
+  //      } else {
+  //        Option(firstLine)
+  //      }
+  //    } else {
+  //      None
+  //    }
+  //  }
 }
 
 private[migration] trait FileSystemJar extends FileSystem {
@@ -113,8 +136,6 @@ private[migration] trait FileSystemJar extends FileSystem {
   override def fileName: String = name.substring(name.lastIndexOf('/') + 1)
 }
 
-private[migration] object FileSystemJarFile
-
 private[migration] case class FileSystemJarFile(name: String, content: Option[String]) extends FileSystemJar {
 
   override def isFile: Boolean = true
@@ -122,17 +143,26 @@ private[migration] case class FileSystemJarFile(name: String, content: Option[St
   override def children: Seq[FileSystem] = Nil
 }
 
-private[migration] object FileSystemJarDir
-
-private[migration] case class FileSystemJarDir(clazz: Class[_], name: String, subs: Seq[String]) extends FileSystemJar {
+/**
+ *
+ * @param name FullPath
+ */
+private[migration] case class FileSystemJarDir(name: String) extends FileSystemJar {
 
   override def isFile: Boolean = false
 
   override def content: Option[String] = None
 
-  override def children: Seq[FileSystem] = if (isFile) {
-    Nil
-  } else {
-    subs.map(b => FileSystemJar(clazz, name + "/" + b))
+  private[this] val _children: mutable.HashMap[String, FileSystemJar] = mutable.HashMap[String, FileSystemJar]()
+
+  def add(path: Seq[String], fullPath: String, fsJar: FileSystemJar): FileSystemJarDir = {
+    if (path.length == 1) {
+      _children.update(path.head, fsJar)
+    } else {
+      _children.get(path.head).asInstanceOf[FileSystemJarDir].add(path.tail, fullPath, fsJar)
+    }
+    this
   }
+
+  override def children: Seq[FileSystem] = _children.values.toSeq
 }
