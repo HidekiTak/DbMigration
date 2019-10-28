@@ -67,23 +67,36 @@ private[migration] trait MigratorConfig {
 
 private[migration] object MigratorConfig {
 
-  def apply(fileSystem: FileSystem, migrationDic: MigrationDic): Seq[MigratorConfig] = {
+  def apply(
+             fileSystem: FileSystem,
+             migrationDic: MigrationDic,
+             formatter: (MigrationDic, String) => String): Seq[MigratorConfig] = {
     val children = fileSystem.children
     val ruleConf = children.sortBy(_.fileName).find(_.fileName.endsWith(".conf"))
     if (ruleConf.nonEmpty) {
-      apply(fileSystem, ruleConf.head, migrationDic, children.filter(_.isFile)).toList
+      apply(fileSystem, ruleConf.head, migrationDic, children.filter(_.isFile), formatter).toList
     } else {
-      children.filter(!_.isFile).sortBy(_.fileName).flatMap(apply(_, migrationDic))
+      children.filter(!_.isFile).sortBy(_.fileName).flatMap(apply(_, migrationDic, formatter))
     }
   }
 
-  private[this] def apply(parent: FileSystem, configFile: FileSystem, migrationDic: MigrationDic, others: Seq[FileSystem]): Option[MigratorConfig] = {
-    MigratorConfigParser.parse(parent.fileName, configFile.content.getOrElse(""), migrationDic).map(_.withFolderName(parent.fileName).withSqls(toSqls(others, migrationDic)))
+  private[this] def apply(
+                           parent: FileSystem,
+                           configFile: FileSystem,
+                           migrationDic: MigrationDic,
+                           others: Seq[FileSystem],
+                           formatter: (MigrationDic, String) => String): Option[MigratorConfig] = {
+    MigratorConfigParser.parse(
+      parent.fileName, configFile.content.getOrElse(""), migrationDic).map(_.withFolderName(parent.fileName).withSqls(toSqls(others, migrationDic, formatter)))
   }
 
-  private[this] def toSqls(sqls: Seq[FileSystem], migrationDic: MigrationDic): Seq[(String, Seq[String])] = {
+  private[this] def toSqls(
+                            sqls: Seq[FileSystem],
+                            migrationDic: MigrationDic,
+                            formatter: (MigrationDic, String) => String): Seq[(String, Seq[String])] = {
     sqls.filter(fs => fs.isFile && fs.fileName.endsWith(".sql") && fs.content.nonEmpty).map { fs =>
-      (fs.fileName.substring(0, fs.fileName.length - 4), MySqlSplitter.split(fs.fileName, fs.content.get, migrationDic))
+      (formatter(migrationDic, fs.fileName.substring(0, fs.fileName.length - 4)),
+        MySqlSplitter.split(fs.fileName, fs.content.get, migrationDic))
     }
   }
 }

@@ -25,9 +25,14 @@ class MigratorConfigTest {
     }
   }
 
+  private final val noFormatter: (MigrationDic, String) => String = (_, str) => str
+
   @Test
   def parseTest(): Unit = {
-    val configs = MigratorConfig(FileSystem(getClass, FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest1"), MigrationDicDefault)
+    val configs = MigratorConfig(
+      FileSystem(getClass, FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest1"),
+      MigrationDicDefault,
+      noFormatter)
     configs.foreach { conf =>
       conf.iterator.foreach(_.exec { (con, schemaName) =>
         MigrationSchema.process(
@@ -39,7 +44,10 @@ class MigratorConfigTest {
       })
     }
 
-    val configs2 = MigratorConfig(FileSystem(getClass, FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest2"), MigrationDicDefault)
+    val configs2 = MigratorConfig(
+      FileSystem(getClass, FileSystem.prefixJar + "/jp/hotbrain/db/migration/filesystemtest2"),
+      MigrationDicDefault,
+      noFormatter)
     configs2.foreach { conf =>
       conf.iterator.foreach(_.exec { (con, schemaName) =>
         MigrationSchema.process("parseTest", con, schemaName, conf.sqls)
