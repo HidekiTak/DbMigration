@@ -42,6 +42,29 @@ object Migrator {
       )
   }
 
+  def withConnection(
+                      con: Connection,
+                      clazz: Class[_],
+                      jarPackageName: String,
+                      migrationDic: MigrationDic = MigrationDicDefault,
+                      targetSchema: String = null,
+                      targetFormatter: (MigrationDic, String) => String = noFormatter,
+                      dryRun: Boolean = false): Unit = {
+    val currentCatalog = con.getCatalog
+    try {
+      MigratorConfig(FileSystem(clazz, FileSystem.prefixJar + jarPackageName), migrationDic, targetFormatter)
+        .foreach(conf =>
+          conf.filter(null == targetSchema || targetSchema == _).foreach {
+            _.exec(con, MigrationSchema.process(conf.folderName, _, _, conf.sqls, dryRun))
+          }
+        )
+    } catch {
+      case ex: Throwable =>
+        con.setCatalog(currentCatalog)
+        throw ex
+    }
+  }
+
   def job(con: Connection, jobName: String, schema: String, callback: Connection => Unit): Unit = {
     MigrationSchema.job(jobName, con, schema, callback)
   }

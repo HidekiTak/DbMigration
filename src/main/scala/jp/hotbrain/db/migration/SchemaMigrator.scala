@@ -6,6 +6,9 @@ import java.sql.{Connection, DriverManager}
 import scala.util.parsing.combinator.RegexParsers
 
 private[migration] trait Callback {
+
+  def exec(con: Connection, callback: (Connection, String) => Unit): Unit
+
   def exec(callback: (Connection, String) => Unit): Unit
 }
 
@@ -51,6 +54,7 @@ private[migration] trait MigratorConfig {
     override def next(): Callback = {
       val schema = schemas.next()
       new Callback {
+
         override def exec(callback: (Connection, String) => Unit): Unit = {
           val con: Connection = factory(schema)
           try {
@@ -58,6 +62,10 @@ private[migration] trait MigratorConfig {
           } finally {
             con.close()
           }
+        }
+
+        override def exec(con: Connection, callback: (Connection, String) => Unit): Unit = {
+          callback(con, schema)
         }
       }
     }
