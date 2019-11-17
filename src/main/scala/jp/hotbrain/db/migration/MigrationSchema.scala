@@ -130,6 +130,7 @@ private[migration] object MigrationSchema {
         createSemaphore(con, schema, semaphorePrefix)
         withSemaphoreSub(con, schema, semaphorePrefix, callback)
       case ex: SQLException if 0 <= ex.getMessage.indexOf("doesn't exist") =>
+        println(ex.getMessage)
         createSemaphore(con, schema, semaphorePrefix)
         withSemaphoreSub(con, schema, semaphorePrefix, callback)
     }
