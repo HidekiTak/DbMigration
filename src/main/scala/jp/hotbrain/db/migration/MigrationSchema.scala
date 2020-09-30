@@ -86,19 +86,17 @@ private[migration] object MigrationSchema {
     } else {
       con.setAutoCommit(false)
       val stmt = con.createStatement()
-      var sql: String = null
       try {
-        tuple._2.foreach { s =>
-          sql = s
-          stmt.execute(s)
+        tuple._2.zipWithIndex.foreach { s =>
+          println(s"DbMigration: ${con.getCatalog}.${tuple._1}(${s._2}): '${s._1.replaceAllLiterally("\n", "\\n")}'")
+          stmt.execute(s._1)
         }
-        //        stmt.executeBatch()
         jobDone(con, tuple._1, semaphorePrefix)
         con.commit()
         println(s"DbMigration: ${con.getCatalog}.${tuple._1}: done")
       } catch {
         case ex: Throwable =>
-          System.err.println(s"DbMigration: ${con.getCatalog}.${tuple._1}: $sql: ${ex.getMessage}")
+          System.err.println(s"DbMigration: ${con.getCatalog}.${tuple._1}: '${ex.getMessage}'")
           con.rollback()
           throw ex
       } finally {
