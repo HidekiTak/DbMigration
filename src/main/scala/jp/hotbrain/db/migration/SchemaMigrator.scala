@@ -153,7 +153,7 @@ private[migration] object MigratorConfigString {
   }
 
   def load(connectionString: String): Unit = {
-    apply(connectionString).foreach(name => println(s"DbMigration: Driver loaded: $name"))
+    apply(connectionString).foreach(name => println(s"[setup] $nowString: DbMigration: Driver loaded: $name"))
   }
 }
 
@@ -296,9 +296,9 @@ private[migration] object MigratorConfigParser extends RegexParsers {
               case None => x(migrationDic)
             }
         }
-      case Failure(msg, _) => println(s"""DbMigration: FAILURE("$folderName"): $msg""")
+      case Failure(msg, _) => println(s"""[setup] $nowString: DbMigration: FAILURE("$folderName"): $msg""")
         throw new Exception(s"""DbMigration: FAILURE("$folderName"): $msg""")
-      case Error(msg, next) => println(s"""DbMigration: ERROR("$folderName" line.${next.pos.line}-columns.${next.pos.column}): $msg""")
+      case Error(msg, next) => println(s"""[setup] $nowString: DbMigration: ERROR("$folderName" line.${next.pos.line}-columns.${next.pos.column}): $msg""")
         throw new Exception(s"""DbMigration: ERROR("$folderName" line.${next.pos.line}-columns.${next.pos.column}): $msg""")
     }
 }

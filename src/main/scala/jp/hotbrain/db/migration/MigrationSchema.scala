@@ -34,7 +34,7 @@ private[migration] object MigrationSchema {
   }
 
   def process(fileName: String, con: Connection, schema: String, sqls: Seq[(String, Seq[String])], dryRun: Boolean = false, semaphorePrefix: String = "migration"): Unit = {
-    println(s"DbMigration: start: $fileName for $schema")
+    println(s"[setup] $nowString: DbMigration: start: $fileName for $schema")
     withSemaphore(
       con,
       schema,
@@ -77,26 +77,26 @@ private[migration] object MigrationSchema {
 
   private[this] def processOne(con: Connection, semaphorePrefix: String, tuple: (String, Seq[String]), dryRun: Boolean): Unit = {
     if (dryRun) {
-      println(s"DbMigration: ${con.getCatalog}.${tuple._1}: start")
+      println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: start")
       tuple._2.foreach { sql =>
         println(sql)
         println
       }
-      println(s"DbMigration: ${con.getCatalog}.${tuple._1}: done")
+      println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: done")
     } else {
       con.setAutoCommit(false)
       val stmt = con.createStatement()
       try {
         tuple._2.zipWithIndex.foreach { s =>
-          println(s"DbMigration: ${con.getCatalog}.${tuple._1}(${s._2}): '${s._1.replaceAllLiterally("\n", "\\n")}'")
+          println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}(${s._2}): '${s._1.replaceAllLiterally("\n", "\\n")}'")
           stmt.execute(s._1)
         }
         jobDone(con, tuple._1, semaphorePrefix)
         con.commit()
-        println(s"DbMigration: ${con.getCatalog}.${tuple._1}: done")
+        println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: done")
       } catch {
         case ex: Throwable =>
-          System.err.println(s"DbMigration: ${con.getCatalog}.${tuple._1}: '${ex.getMessage}'")
+          System.err.println(s"[sever] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: '${ex.getMessage}'")
           con.rollback()
           throw ex
       } finally {
@@ -110,11 +110,11 @@ private[migration] object MigrationSchema {
     val stmt = con.createStatement()
     try {
       stmt.execute(s"CREATE SCHEMA `$schema`")
-      println(s"DbMigration: $schema: created")
+      println(s"[setup] $nowString: DbMigration: $schema: created")
     } catch {
       case ex: SQLException if 0 <= ex.getMessage.indexOf("Can't create database") =>
       case ex: Throwable =>
-        System.err.println(s"DbMigration: $schema: fail to create")
+        System.err.println(s"[sever] $nowString: DbMigration: $schema: fail to create")
         ex.printStackTrace(System.err)
         throw ex
     } finally {
