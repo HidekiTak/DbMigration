@@ -35,11 +35,21 @@ private[migration] object MigrationSchema {
 
   def process(fileName: String, con: Connection, schema: String, sqls: Seq[(String, Seq[String])], dryRun: Boolean = false, semaphorePrefix: String = "migration"): Unit = {
     println(s"[setup] $nowString: DbMigration: start: $fileName for $schema")
-    withSemaphore(
-      con,
-      schema,
-      semaphorePrefix,
-      checkDone(_, schema, sqls.sortBy(_._1), semaphorePrefix).foreach(processOne(con, semaphorePrefix, _, dryRun)))
+    var again = 10
+    while (0 < again) {
+      try {
+        withSemaphore(
+          con,
+          schema,
+          semaphorePrefix,
+          checkDone(_, schema, sqls.sortBy(_._1), semaphorePrefix).foreach(processOne(con, semaphorePrefix, _, dryRun)))
+        again = -1
+      } catch {
+        case _: ExSemaphoreNotGet =>
+          again = again - 1
+          Thread.sleep(100)
+      }
+    }
   }
 
   private[this] def checkDone(con: Connection, schema: String, sqls: Seq[(String, Seq[String])], semaphorePrefix: String): Seq[(String, Seq[String])] = {
@@ -146,6 +156,12 @@ ON DUPLICATE KEY UPDATE
 `executor`=IF(`start_at`+60000>VALUES(`start_at`),`executor`,VALUES(`executor`)),
 `start_at`=IF(`start_at`+60000>VALUES(`start_at`),`start_at`,VALUES(`start_at`))"""
 
+  class ExSemaphoreNotGet(mess: String) extends Exception(mess)
+
+  private[this] final def sqlCheckSemaphore(semaphorePrefix: String): String =
+    s"SELECT * FROM `${semaphorePrefix}_semaphore` WHERE `id`=1"
+
+
   private[this] def withSemaphoreSub(con: Connection, schema: String, semaphorePrefix: String, callback: Connection => Unit): Unit = {
     con.setCatalog(schema)
     val now = System.currentTimeMillis
@@ -155,13 +171,26 @@ ON DUPLICATE KEY UPDATE
     try {
       prep.setString(1, execName)
       prep.setLong(2, now)
-      if (prep.executeUpdate() <= 0) {
-        // Semaphoreが取れなかった
-        throw new Exception(s"fail to get a semaphore $schema")
-      }
+      prep.executeUpdate()
     } finally {
       prep.close()
     }
+
+    val prep2 = con.prepareStatement(sqlCheckSemaphore(semaphorePrefix))
+    try {
+      val rs = prep2.executeQuery()
+      try {
+        if (!rs.next() || now != rs.getLong("start_at") || rs.getString("executor") != execName) {
+          // Semaphoreが取れなかった
+          throw new ExSemaphoreNotGet(s"fail to get a semaphore $schema")
+        }
+      } finally {
+        rs.close()
+      }
+    } finally {
+      prep2.close()
+    }
+
     try {
       callback(con)
     } finally {
