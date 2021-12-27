@@ -10,7 +10,7 @@ scalaVersion := "2.12.7"
 
 crossScalaVersions := Seq("2.12.7", "2.13.1")
 
-javacOptions ++= Seq("-source", "11", "-target", "11", "-Xlint")
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
 
 crossPaths := true
 

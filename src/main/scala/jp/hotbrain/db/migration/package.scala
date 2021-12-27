@@ -11,4 +11,14 @@ package object migration {
 
   def nowString: String = DateTimeFormat.format(LocalDateTime.now(ZoneId_UTC))
 
+
+  private[this] var _verbose: Boolean = false
+
+  def setVerbose(verbose: Boolean): Unit = {
+    _verbose = verbose
+  }
+
+  def verbose: Boolean = {
+    _verbose
+  }
 }

@@ -86,8 +86,8 @@ private[migration] object MigrationSchema {
 
 
   private[this] def processOne(con: Connection, semaphorePrefix: String, tuple: (String, Seq[String]), dryRun: Boolean): Unit = {
+    println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: start")
     if (dryRun) {
-      println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: start")
       tuple._2.foreach { sql =>
         println(sql)
         println
@@ -98,7 +98,9 @@ private[migration] object MigrationSchema {
       val stmt = con.createStatement()
       try {
         tuple._2.zipWithIndex.foreach { s =>
-          println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}(${s._2}): '${s._1.replaceAllLiterally("\n", "\\n")}'")
+          if (verbose) {
+            println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}(${s._2}): '${s._1.replaceAllLiterally("\n", "\\n")}'")
+          }
           stmt.execute(s._1)
         }
         jobDone(con, tuple._1, semaphorePrefix)
