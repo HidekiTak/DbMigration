@@ -3,9 +3,9 @@ jobs:
   build:
     working_directory: ~/samplescala
     docker:
-      - image: openjdk:8
+      - image: openjdk:21
     environment:
-      SBT_VERSION: 1.5.5
+      SBT_VERSION: 1.10.0
     steps:
       - run: echo 'export ARTIFACT_BUILD=$CIRCLE_PROJECT_REPONAME-$CIRCLE_BUILD_NUM.zip' >> $BASH_ENV
       - run:

@@ -2,28 +2,28 @@ name := """DbMigration"""
 
 organization := "jp.hotbrain"
 
-version := "0.3.0-SNAPSHOT"
+version := "0.5.0-SNAPSHOT"
 
 val ver_mysql = "5.1.47"
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.13.14"
 
-crossScalaVersions := Seq("2.12.7", "2.13.1")
+crossScalaVersions := Seq("2.13.14")
 
-javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
+javacOptions ++= Seq("-source", "21", "-target", "21", "-Xlint")
 
 crossPaths := true
 
 libraryDependencies ++= Seq(
   // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
-  "org.junit.jupiter" % "junit-jupiter-api" % "5.7.2" % Test
+  "org.junit.jupiter" % "junit-jupiter-api" % "5.10.3" % Test
   // https://mvnrepository.com/artifact/org.junit.vintage/junit-vintage-engine
-  , "org.junit.vintage" % "junit-vintage-engine" % "5.7.2" % Test
+  , "org.junit.vintage" % "junit-vintage-engine" % "5.10.3" % Test
   // https://mvnrepository.com/artifact/org.junit.platform/junit-platform-launcher
-  , "org.junit.platform" % "junit-platform-launcher" % "1.7.2" % Test
+  , "org.junit.platform" % "junit-platform-launcher" % "1.10.3" % Test
 
   // https://mvnrepository.com/artifact/org.scala-lang.modules/scala-parser-combinators
-  , "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+  , "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
 
-  , "mysql" % "mysql-connector-java" % ver_mysql
+  , "mysql" % "mysql-connector-java" % "5.1.49"
 )

@@ -11,6 +11,7 @@ class MigratorConfigTest {
   @Before
   def beforeTest(): Unit = {
     // drop schemas
+    println(connectionString)
     val con = DriverManager.getConnection(connectionString)
     try {
       val stmt = con.createStatement()
