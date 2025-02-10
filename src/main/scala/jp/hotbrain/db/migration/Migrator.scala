@@ -52,14 +52,20 @@ object Migrator {
                       dryRun: Boolean = false): Unit = {
     val currentCatalog = con.getCatalog
     try {
-      MigratorConfig(FileSystem(clazz, FileSystem.prefixJar + jarPackageName), migrationDic, targetFormatter)
-        .foreach(conf =>
-          conf.filter(null == targetSchema || targetSchema == _).foreach {
-            _.exec(con, MigrationSchema.process(conf.folderName, _, _, conf.sqls, dryRun))
-          }
-        )
+      val configs = MigratorConfig(FileSystem(clazz, FileSystem.prefixJar + jarPackageName), migrationDic, targetFormatter)
+      configs.foreach { conf =>
+        conf.filter { c =>
+          null == targetSchema || targetSchema == c
+        }.foreach { c =>
+          c.exec(con, { (con, str) =>
+            MigrationSchema.process(conf.folderName, con, str, conf.sqls, dryRun)
+          })
+        }
+      }
     } catch {
       case ex: Throwable =>
+        println(ex.getMessage)
+        ex.printStackTrace()
         con.setCatalog(currentCatalog)
         throw ex
     }

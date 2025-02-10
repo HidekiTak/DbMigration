@@ -2,7 +2,7 @@ name := """DbMigration"""
 
 organization := "jp.hotbrain"
 
-version := "0.5.0-SNAPSHOT"
+version := "1.6.0-SNAPSHOT"
 
 val ver_mysql = "5.1.47"
 
@@ -16,14 +16,14 @@ crossPaths := true
 
 libraryDependencies ++= Seq(
   // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
-  "org.junit.jupiter" % "junit-jupiter-api" % "5.10.3" % Test
+  "org.junit.jupiter" % "junit-jupiter-api" % "5.11.4" % Test
   // https://mvnrepository.com/artifact/org.junit.vintage/junit-vintage-engine
-  , "org.junit.vintage" % "junit-vintage-engine" % "5.10.3" % Test
+  , "org.junit.vintage" % "junit-vintage-engine" % "5.11.4" % Test
   // https://mvnrepository.com/artifact/org.junit.platform/junit-platform-launcher
-  , "org.junit.platform" % "junit-platform-launcher" % "1.10.3" % Test
+  , "org.junit.platform" % "junit-platform-launcher" % "1.11.4" % Test
 
   // https://mvnrepository.com/artifact/org.scala-lang.modules/scala-parser-combinators
-  , "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+  , "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
 
   , "mysql" % "mysql-connector-java" % "5.1.49"
 )

@@ -46,32 +46,47 @@ private[migration] trait MigratorConfig {
 
   def iterator: Iterator[Callback] = filter(_ => true)
 
-  def filter(f: String => Boolean): Iterator[Callback] = new Iterator[Callback] {
-    private[this] val schemas = list.filter(f).iterator
+  private[this] class CallbackImpl(
+                                    final val schema: String,
+                                  ) extends Callback {
 
-    override def hasNext: Boolean = schemas.hasNext
-
-    override def next(): Callback = {
-      val schema = schemas.next()
-      new Callback {
-
-        override def exec(callback: (Connection, String) => Unit): Unit = {
-          val con: Connection = factory(schema)
-          try {
-            callback(con, schema)
-          } finally {
-            con.close()
-          }
-        }
-
-        override def exec(con: Connection, callback: (Connection, String) => Unit): Unit = {
-          callback(con, schema)
-        }
+    override def exec(callback: (Connection, String) => Unit): Unit = {
+      val con: Connection = factory(schema)
+      try {
+        callback(con, schema)
+      } finally {
+        con.close()
       }
     }
+
+    override def exec(con: Connection, callback: (Connection, String) => Unit): Unit = {
+      callback(con, schema)
+    }
+  }
+
+  private[this] class CallbackIterator(
+                                        final val schemas: Seq[String],
+                                      ) extends Iterator[Callback] {
+    private[this] var index: Int = 0
+
+    override def hasNext: Boolean = {
+      0 <= index && null != schemas && index < schemas.length
+    }
+
+    override def next(): Callback = {
+      if (!this.hasNext) {
+        throw new Exception()
+      }
+      val schema = this.schemas(this.index)
+      this.index = this.index + 1
+      new CallbackImpl(schema)
+    }
+  }
+
+  def filter(f: String => Boolean): Iterator[Callback] = {
+    new CallbackIterator(list.filter(f))
   }
 }
-
 
 private[migration] object MigratorConfig {
 
@@ -210,7 +225,7 @@ private[migration] case class MigratorConfigEach(
     factory.multiRule
   }
 
-  override protected[migration] lazy val list: Seq[String] = eachRule.schemas(folderName).toSeq
+  override protected[migration] val list: Seq[String] = Seq(schemaName) //eachRule.schemas(folderName).toSeq
 
   override def factory: String => Connection = eachRule.connectionFor
 
