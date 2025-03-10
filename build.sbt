@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
   , "org.junit.platform" % "junit-platform-launcher" % "1.11.4" % Test
 
   // https://mvnrepository.com/artifact/org.scala-lang.modules/scala-parser-combinators
-  , "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
+  , "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
   , "mysql" % "mysql-connector-java" % "5.1.49"
 )
