@@ -36,7 +36,9 @@ object Migrator {
                                 dryRun: Boolean): Unit = {
     MigratorConfig(fileSystem, migrationDic, targetFormatter)
       .foreach(conf =>
-        conf.filter(null == targetSchema || targetSchema == _).foreach {
+        conf.filter{
+          null == targetSchema || targetSchema == _
+        }.foreach {
           _.exec(MigrationSchema.process(conf.folderName, _, _, conf.sqls, dryRun))
         }
       )
