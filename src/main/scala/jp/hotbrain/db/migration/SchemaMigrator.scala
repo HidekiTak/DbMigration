@@ -109,8 +109,12 @@ private[migration] object MigratorConfig {
                            migrationDic: MigrationDic,
                            others: Seq[FileSystem],
                            formatter: (MigrationDic, String) => String): Option[MigratorConfig] = {
-    MigratorConfigParser.parse(
-      parent.fileName, configFile.content.getOrElse(""), migrationDic).map(_.withFolderName(parent.fileName).withSqls(toSqls(others, migrationDic, formatter)))
+    MigratorConfigParser
+      .parse(parent.fileName, configFile.content.getOrElse(""), migrationDic)
+      .map(migratorConfig =>
+        migratorConfig.withFolderName(parent.fileName)
+          .withSqls(toSqls(others, migrationDic, formatter))
+      )
   }
 
   private[this] def toSqls(

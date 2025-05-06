@@ -34,14 +34,15 @@ object Migrator {
                                 targetSchema: String,
                                 targetFormatter: (MigrationDic, String) => String,
                                 dryRun: Boolean): Unit = {
-    MigratorConfig(fileSystem, migrationDic, targetFormatter)
-      .foreach(conf =>
-        conf.filter{
-          null == targetSchema || targetSchema == _
-        }.foreach {
-          _.exec(MigrationSchema.process(conf.folderName, _, _, conf.sqls, dryRun))
-        }
-      )
+    val configs = MigratorConfig(fileSystem, migrationDic, targetFormatter)
+    configs.foreach(conf =>
+      conf.filter { x =>
+        println(x)
+        null == targetSchema || targetSchema == x
+      }.foreach { c =>
+        c.exec(MigrationSchema.process(conf.folderName, _, _, conf.sqls, dryRun))
+      }
+    )
   }
 
   def withConnection(
