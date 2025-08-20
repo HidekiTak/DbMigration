@@ -50,7 +50,7 @@ class MigrationSchemaTest {
   @Test
   def xTest(): Unit = {
     withTable(
-      s"migration_test_${MigrationSchema.hostName}_${System.currentTimeMillis()}",
+      catalogName = s"migration_test_${MigrationSchema.hostName}_${System.currentTimeMillis()}",
       (con, catalogName) => {
         MigrationSchema.process(
           "xTest",
