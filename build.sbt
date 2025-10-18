@@ -18,14 +18,14 @@ crossPaths := true
 
 libraryDependencies ++= Seq(
   // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
-  "org.junit.jupiter" % "junit-jupiter-api" % "5.13.4" % Test
+  "org.junit.jupiter" % "junit-jupiter-api" % "6.0.0" % Test,
   // https://mvnrepository.com/artifact/org.junit.vintage/junit-vintage-engine
-  , "org.junit.vintage" % "junit-vintage-engine" % "5.13.4" % Test
+  "org.junit.vintage" % "junit-vintage-engine" % "6.0.0" % Test,
   // https://mvnrepository.com/artifact/org.junit.platform/junit-platform-launcher
-  , "org.junit.platform" % "junit-platform-launcher" % "1.13.4" % Test
+  "org.junit.platform" % "junit-platform-launcher" % "6.0.0" % Test,
 
   // https://mvnrepository.com/artifact/org.scala-lang.modules/scala-parser-combinators
-  , "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
 
-  , "mysql" % "mysql-connector-java" % ver_mysql
+  "mysql" % "mysql-connector-java" % ver_mysql % Test,
 )
