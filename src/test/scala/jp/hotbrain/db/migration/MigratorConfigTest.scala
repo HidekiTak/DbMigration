@@ -36,6 +36,7 @@ class MigratorConfigTest {
       noFormatter)
     configs.foreach { conf =>
       conf.iterator.foreach(_.exec { (con, schemaName) =>
+        println(s"conf_folder: ${conf.folderName}, $schemaName")
         MigrationSchema.process(
           "parseTest",
           con,

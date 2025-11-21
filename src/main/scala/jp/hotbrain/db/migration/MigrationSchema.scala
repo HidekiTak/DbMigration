@@ -3,6 +3,7 @@ package jp.hotbrain.db.migration
 import java.net.InetAddress
 import java.sql.{Connection, SQLException}
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 trait QuerySet {
@@ -63,6 +64,7 @@ private[migration] object MigrationSchema {
     println(s"[setup] $nowString: DbMigration: start: $fileName for $schema")
     var again = 10
     while (0 < again) {
+      println(s"[setup] $nowString: DbMigration: $again")
       try {
         withSemaphore(
           con, querySet, schema, semaphorePrefix,
@@ -86,7 +88,7 @@ private[migration] object MigrationSchema {
   }
 
   private[this] def getDone(con: Connection, querySet: QuerySet, schema: String, semaphorePrefix: String): Array[String] = {
-    con.setCatalog(schema)
+    this.setCatalog(con, querySet, schema)
     val stmt = con.createStatement()
     try {
       val rs = stmt.executeQuery(querySet.DoneList(semaphorePrefix))
@@ -117,6 +119,7 @@ private[migration] object MigrationSchema {
       }
       println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: done")
     } else {
+      var last_sql: String = ""
       con.setAutoCommit(false)
       val stmt = con.createStatement()
       try {
@@ -124,6 +127,7 @@ private[migration] object MigrationSchema {
           if (verbose) {
             println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}(${s._2}): '${s._1.replaceAllLiterally("\n", "\\n")}'")
           }
+          last_sql = s._1
           stmt.execute(s._1)
         }
         jobDone(con, querySet, tuple._1, semaphorePrefix)
@@ -131,7 +135,7 @@ private[migration] object MigrationSchema {
         println(s"[setup] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: done")
       } catch {
         case ex: Throwable =>
-          System.err.println(s"[sever] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: '${ex.getMessage}'")
+          System.err.println(s"[sever] $nowString: DbMigration: ${con.getCatalog}.${tuple._1}: '${ex.getMessage}'\n$last_sql")
           con.rollback()
           throw ex
       } finally {
@@ -157,48 +161,39 @@ private[migration] object MigrationSchema {
   //    }
   //  }
 
-  private[this] def withSemaphore(con: Connection, querySet: QuerySet, schema: String, semaphorePrefix: String, callback: Connection => Unit): Unit = {
+  private[this] def setCatalog(con: Connection, querySet: QuerySet, schema: String): Unit = {
     try {
       con.setCatalog(schema)
-      withSemaphoreSub(con, querySet, schema, semaphorePrefix, callback)
     } catch {
-      case ex: SQLException if 0 <= ex.getMessage.indexOf("Unknown database") || (ex.getMessage.startsWith("FATAL: database ") && ex.getMessage.endsWith(" does not exist")) =>
+      case ex: SQLException if ex.getMessage.startsWith("Unknown database") =>
         querySet.SchemaCreate(con, schema)
-        createSemaphore(con, querySet, schema, semaphorePrefix)
-        withSemaphoreSub(con, querySet, schema, semaphorePrefix, callback)
-      case ex: SQLException if 0 <= ex.getMessage.indexOf("doesn't exist") || 0 <= ex.getMessage.indexOf("does not exist") =>
-        println(ex.getMessage)
-        createSemaphore(con, querySet, schema, semaphorePrefix)
-        withSemaphoreSub(con, querySet, schema, semaphorePrefix, callback)
+        con.setCatalog(schema)
     }
   }
-  //
-  //  private[this] final def sqlGetSemaphore(databaseProductName: String, semaphorePrefix: String): String = {
-  //    databaseProductName match {
-  //      case "PostgreSQL" =>
-  //        s"""INSERT INTO "${semaphorePrefix}_semaphore"
-  //("id","executor","start_at")
-  //VALUES(1,?,?)
-  //ON CONFLICT(id) DO UPDATE SET
-  //  "executor"=IF("start_at"+60000>EXCLUDED."start_at","executor",EXCLUDED."executor"),
-  //  "start_at"=IF("start_at"+60000>EXCLUDED."start_at","start_at",EXCLUDED."start_at")"""
-  //      case _ =>
-  //        s"""INSERT INTO `${semaphorePrefix}_semaphore`
-  //(`id`,`executor`,`start_at`)
-  //VALUES(1,?,?)
-  //ON DUPLICATE KEY UPDATE
-  //`executor`=IF(`start_at`+60000>VALUES(`start_at`),`executor`,VALUES(`executor`)),
-  //`start_at`=IF(`start_at`+60000>VALUES(`start_at`),`start_at`,VALUES(`start_at`))"""
-  //    }
-  //  }
+
+  private[this] def withSemaphore(con: Connection, querySet: QuerySet, schema: String, semaphorePrefix: String, callback: Connection => Unit): Unit = {
+    try {
+      println(s"withSemaphore: con.setCatalog($schema)")
+      this.setCatalog(con, querySet, schema)
+      println(s"con.setCatalog($schema)")
+      withSemaphoreSub(con, querySet, schema, semaphorePrefix, callback)
+    } catch {
+      case ex: SQLException if ex.getMessage.contains("doesn't exist") || ex.getMessage.contains("does not exist") =>
+        println(ex.getMessage)
+        if (ex.getMessage.contains("migration_semaphore")) {
+          createSemaphore(con, querySet, schema, semaphorePrefix)
+        }
+        withSemaphoreSub(con, querySet, schema, semaphorePrefix, callback)
+      case ex: Throwable =>
+        println(ex.getMessage)
+        ex.printStackTrace()
+        throw ex
+    }
+  }
 
   class ExSemaphoreNotGet(mess: String) extends Exception(mess)
 
-  //  private[this] final def sqlCheckSemaphore(semaphorePrefix: String): String =
-  //    s"SELECT * FROM `${semaphorePrefix}_semaphore` WHERE `id`=1"
-
   private[this] def withSemaphoreSub(con: Connection, querySet: QuerySet, schema: String, semaphorePrefix: String, callback: Connection => Unit): Unit = {
-    con.setCatalog(schema)
     val now = System.currentTimeMillis
     val execName = hostName + "_" + Thread.currentThread.threadId
     val prep = con.prepareStatement(querySet.GetSemaphore(semaphorePrefix))
@@ -214,9 +209,9 @@ private[migration] object MigrationSchema {
     try {
       val rs = prep2.executeQuery()
       try {
-        if (!rs.next() || now != rs.getLong("start_at") || rs.getString("executor") != execName) {
+        if (!rs.next() || rs.getString("executor") != execName) {
           // Semaphoreが取れなかった
-          throw new ExSemaphoreNotGet(s"fail to get a semaphore $schema")
+          throw new ExSemaphoreNotGet(s"""fail to get a semaphore("$schema"): "${rs.getString("executor")}" != "$execName"""")
         }
       } finally {
         rs.close()
@@ -238,23 +233,8 @@ private[migration] object MigrationSchema {
       }
     }
   }
-  //
-  //  private[this] def sqlCreateJob(semaphorePrefix: String): String =
-  //    s"""CREATE TABLE `${semaphorePrefix}_jobs` (
-  //  `name` VARCHAR(255) NOT NULL,
-  //  `at` BIGINT NOT NULL,
-  //  PRIMARY KEY (`name`))"""
-  //
-  //  private[this] def sqlCreateSemaphore(semaphorePrefix: String): String =
-  //    s"""CREATE TABLE `${semaphorePrefix}_semaphore` (
-  //  `id` INT NOT NULL,
-  //  `executor` VARCHAR(255) NOT NULL,
-  //  `start_at` BIGINT NOT NULL,
-  //  PRIMARY KEY (`id`));
-  //"""
 
   private[this] def createSemaphore(con: Connection, querySet: QuerySet, schema: String, semaphorePrefix: String): Unit = {
-    con.setCatalog(schema)
     con.setAutoCommit(true)
     val stmt = con.createStatement()
     try {

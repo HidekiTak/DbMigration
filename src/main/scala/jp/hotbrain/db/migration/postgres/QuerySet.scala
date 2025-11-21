@@ -13,7 +13,7 @@ object QuerySet extends migration.QuerySet {
 VALUES(1,?,?)
 ON CONFLICT(id) DO UPDATE SET
   "executor"=CASE WHEN "migration_semaphore"."start_at"+60000>EXCLUDED."start_at" THEN "migration_semaphore"."executor" ELSE EXCLUDED."executor" END,
-  "start_at"=CASE WHEN "migration_semaphore"."start_at"+60000>EXCLUDED."start_at" THEN "migration_semaphore"."start_at" ELSE EXCLUDED."start_at" END"""
+  "start_at"=CASE WHEN "executor"=EXCLUDED."executor" THEN "migration_semaphore"."start_at" ELSE EXCLUDED."start_at" END"""
   }
 
   override def CheckSemaphore(semaphorePrefix: String): String = {

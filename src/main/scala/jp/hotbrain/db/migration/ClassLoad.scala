@@ -17,7 +17,9 @@ private[migration] object ClassLoad {
     // まずobjectを検索してMODULE$でInstanceをGet
     // なければDefaultConstructorを使ってInstanceをGet
     if (null == refPath || refPath.isEmpty || name.contains('.')) {
-      findObject(name, needInterface).orElse(findClass(name, needInterface)).getOrElse(throw new ClassNotFoundException(s"$name not found"))
+      findObject(name, needInterface)
+        .orElse(findClass(name, needInterface))
+        .getOrElse(throw new ClassNotFoundException(s"$name not found"))
     } else {
       refPath.foldLeft(None: Option[T])((r, path) =>
         r.orElse {
@@ -46,6 +48,7 @@ private[migration] object ClassLoad {
   }
 
   private[this] def findObject[T](name: String, needInterface: Array[Class[_]] = null)(implicit tag: ClassTag[T]): Option[T] = {
+    println(s"findObject($name): ${needInterface.map(_.getName).mkString(", ")}")
     try {
       val obj = Thread.currentThread().getContextClassLoader.loadClass(name + "$")
       if (null == obj || !checkClass(obj, needInterface)) {

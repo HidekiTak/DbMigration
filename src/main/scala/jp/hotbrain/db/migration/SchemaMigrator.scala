@@ -176,7 +176,7 @@ private[migration] object MigratorConfigString {
   }
 }
 
-private[migration] object MigratorConfigCon
+//private[migration] object MigratorConfigCon
 
 private[migration] case class MigratorConfigCon(
                                                  singleRuleFactoryName: String,

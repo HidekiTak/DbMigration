@@ -13,7 +13,7 @@ object QuerySet extends migration.QuerySet {
 VALUES(1,?,?)
 ON DUPLICATE KEY UPDATE
 `executor`=IF(`start_at`+60000>VALUES(`start_at`),`executor`,VALUES(`executor`)),
-`start_at`=IF(`start_at`+60000>VALUES(`start_at`),`start_at`,VALUES(`start_at`))"""
+`start_at`=IF(`executor`=VALUES(`executor`),`start_at`,VALUES(`start_at`))"""
   }
 
   override def CheckSemaphore(semaphorePrefix: String): String = {
@@ -52,7 +52,7 @@ ON DUPLICATE KEY UPDATE
   override def SchemaCreate(con: Connection, schema: String): Unit = {
     val stmt = con.createStatement()
     try {
-      stmt.execute(s"CREATE SCHEMA `$schema`")
+      stmt.execute(s"CREATE DATABASE `$schema`")
       println(s"[setup] $nowString: DbMigration: $schema: created")
     } catch {
       case ex: SQLException if 0 <= ex.getMessage.indexOf("Can't create database") =>

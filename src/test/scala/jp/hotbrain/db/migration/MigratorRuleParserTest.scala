@@ -5,16 +5,27 @@ import org.junit.Assert._
 
 class MigratorRuleParserTest {
 
+  class MigrationDicImpl(
+                          final val dic: Map[String, String]
+                        ) extends MigrationDic {
+
+    override def getMigrationParam(key: String): String = {
+      dic.getOrElse(key, "")
+    }
+  }
+
   @Test
   def immediateTest(): Unit = {
-    val result = MigratorConfigParser.parse(
+    val result: MigratorConfig = MigratorConfigParser.parse(
       folderName = "folder",
       input =
         """
-ConnectionString: "${ENV[AWS_REGION]}_common"
+ConnectionString: "${AWS_REGION}_common"
 """,
-      migrationDic = MigrationDicDefault)
-    println(result)
+      migrationDic = new MigrationDicImpl(Map("AWS_REGION" -> "ap-northeast-1"))).orNull
+    assertNotNull(result)
+    assertTrue(result.isInstanceOf[MigratorConfigString])
+    assertEquals("ap-northeast-1_common", result.asInstanceOf[MigratorConfigString].connectionString)
   }
 
   @Test
