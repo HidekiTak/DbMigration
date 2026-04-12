@@ -4,9 +4,7 @@ organization := "jp.hotbrain"
 
 version := "1.7.0-SNAPSHOT"
 
-val ver_mysql = "8.0.33"
-
-scalaVersion := "2.13.16"
+scalaVersion := "2.13.18"
 
 crossScalaVersions := Seq(scalaVersion.value)
 
@@ -18,14 +16,14 @@ crossPaths := true
 
 libraryDependencies ++= Seq(
   // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
-  "org.junit.jupiter" % "junit-jupiter-api" % "6.0.0" % Test,
+  "org.junit.jupiter" % "junit-jupiter-api" % "6.0.3" % Test,
   // https://mvnrepository.com/artifact/org.junit.vintage/junit-vintage-engine
-  "org.junit.vintage" % "junit-vintage-engine" % "6.0.0" % Test,
+  "org.junit.vintage" % "junit-vintage-engine" % "6.0.3" % Test,
   // https://mvnrepository.com/artifact/org.junit.platform/junit-platform-launcher
-  "org.junit.platform" % "junit-platform-launcher" % "6.0.0" % Test,
+  "org.junit.platform" % "junit-platform-launcher" % "6.0.3" % Test,
 
   // https://mvnrepository.com/artifact/org.scala-lang.modules/scala-parser-combinators
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
 
-  "mysql" % "mysql-connector-java" % ver_mysql % Test,
+  "mysql" % "mysql-connector-java" % "8.0.33" % Test,
 )
